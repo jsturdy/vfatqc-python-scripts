@@ -85,33 +85,25 @@ try:
         # replace with a broadcast?
         for col in range(3):
             writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0", 0x37)
-            # print "VFAT%d ContReg0 0x%x"%(((col*8)+i),readVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0"))
             pass
         for dactype in dacmode.keys():
-            # print "Obtaining DAC scan for %s"%(dactype)
             sys.stdout.flush()
             dacname[0] = dactype
             dac = dacmode[dactype]
-            # print dac
             cr0val = []
             # replace with a broadcast?
             for col in range(3):
                 writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg1", dac[0])
-                # print "VFAT%d ContReg1 0x%x"%(((col*8)+i),readVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg1"))
                 if dac[1]:
                     cr0val.append(readVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0"))
-                    # print dac[1]
                     writeval = cr0val[col]|(dac[1]<<6)
                     writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0", writeval)
-                    # print "VFAT%d ContReg0 0x%x"%(((col*8)+i),readVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0"))
                     pass
             for val in range(256):
                 dacinval[0]  = val
                 # replace with a broadcast?
                 for col in range(3):
                     writeVFAT(ohboard, options.gtx, ((col*8)+i), dacmode[dactype][3], val)
-                    # print "VFAT%d %s 0x%x"%(((col*8)+i),dacmode[dactype][3],
-                    #                         readVFAT(ohboard, options.gtx, ((col*8)+i), dacmode[dactype][3]))
                     pass
                 for sample in range(N_EVENTS):
                     for col in range(3):
@@ -120,21 +112,16 @@ try:
                         vfatN[0]     = ((col*8)+i)
                         myT.Fill()
                         pass
-                    # time.sleep(0.00001)
                     pass
                 pass
             for col in range(3):
                 if dac[1]:
                     writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0", cr0val[col])
-                    # print "VFAT%d ContReg0 0x%x"%(((col*8)+i),readVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0"))
                     pass
                 pass
         for col in range(3):
             writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0", 0x0)
             writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg1", 0x0)
-            # print "VFAT%d 0x%x 0x%x"%(((col*8)+i),
-            #                           readVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0"),
-            #                           readVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg1"))
             pass
         myT.AutoSave("SaveSelf")
         sys.stdout.flush()
