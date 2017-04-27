@@ -3,9 +3,9 @@
 def launch(args):
   return launchArgs(*args)
 
-def launchArgs(tool, shelf, slot, link, chamber, scanmin, scanmax, nevts,
-               vt1=None,vt2=0,mspl=None,perchannel=False,trkdata=False,ztrim=4.0,
-               config=False,amc13local=False,t3trig=False, randoms=0, throttle=0):
+def launchArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
+               vt1=None,vt2=0,mspl=None,perchannel=False,trkdata=False,ztrim=4.0,config=False,
+               amc13local=False,t3trig=False, randoms=0, throttle=0):
   import datetime,os,sys
   import subprocess
   from subprocess import CalledProcessError
@@ -22,7 +22,7 @@ def launchArgs(tool, shelf, slot, link, chamber, scanmin, scanmax, nevts,
   # Build Commands
   setupCmds = []
   preCmd    = None
-  cmd       = ["%s"%(tool),"-s%d"%(slot),"-g%d"%(link),"--shelf=%i"%(shelf)]
+  cmd       = ["time", "%s"%(tool),"-s%d"%(slot),"-g%d"%(link),"--shelf=%i"%(shelf)]
 
   if tool == "ultraScurve.py":
     scanType = "scurve"
@@ -120,6 +120,16 @@ def launchArgs(tool, shelf, slot, link, chamber, scanmin, scanmax, nevts,
     if randoms > 0:
       cmd.append( "--randoms=%i"%(randoms))
       pass
+    pass
+  elif tool == "dacScan.py":
+    scanType = "dacscan"
+    dirPath  = "%s/%s/%s/"%(dataPath,chamber_config[link],scanType)
+    setupCmds.append( ["mkdir","-p",dirPath+startTime] )
+    setupCmds.append( ["unlink",dirPath+"current"] )
+    setupCmds.append( ["ln","-s",startTime,dirPath+"current"] )
+    dirPath = dirPath+startTime
+    cmd.append( "--filename=%s/DACScanData.root"%dirPath )
+    cmd.append( "--nevts=%d"%(nevts) )
     pass
   elif tool == "dacScan.py":
     scanType = "dacscan"
