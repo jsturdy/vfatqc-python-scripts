@@ -14,7 +14,10 @@ parser.add_option("--filename", type="string", dest="filename", default="DACData
                   help="Specify Output Filename", metavar="filename")
 
 (options, args) = parser.parse_args()
-uhal.setLogLevelTo( uhal.LogLevel.WARNING )
+
+import cProfile, pstats, StringIO
+pr = cProfile.Profile()
+pr.enable()
 
 if options.debug:
     uhal.setLogLevelTo( uhal.LogLevel.DEBUG )
@@ -54,15 +57,15 @@ ohboard = getOHObject(options.slot,options.gtx,options.shelf,options.debug)
 
 N_EVENTS = Nev[0]
 dacmode = {
-    "IPREAMPIN"   : [1, None, 0,"IPreampIn"],
-    "IPREAMPFEED" : [2, None, 0,"IPreampFeed"],
-    "IPREAMPOUT"  : [3, None, 0,"IPreampOut"],
-    "ISHAPER"     : [4, None, 0,"IShaper"],
-    "ISHAPERFEED" : [5, None, 0,"IShaperFeed"],
-    "ICOMP"       : [6, None, 0,"IComp"],
-    "VTHRESHOLD1" : [7, None, 1,"VThreshold1"],
-    "VTHRESHOLD2" : [8, None, 1,"VThreshold2"],
-    "VCAL"        : [9, None, 1,"VCal"],
+    # "IPREAMPIN"   : [1, None, 0,"IPreampIn"],
+    # "IPREAMPFEED" : [2, None, 0,"IPreampFeed"],
+    # "IPREAMPOUT"  : [3, None, 0,"IPreampOut"],
+    # "ISHAPER"     : [4, None, 0,"IShaper"],
+    # "ISHAPERFEED" : [5, None, 0,"IShaperFeed"],
+    # "ICOMP"       : [6, None, 0,"IComp"],
+    # "VTHRESHOLD1" : [7, None, 1,"VThreshold1"],
+    # "VTHRESHOLD2" : [8, None, 1,"VThreshold2"],
+    # "VCAL"        : [9, None, 1,"VCal"],
     "CALOUTVLOW"  : [10,1,    1,"VCal"],
     "CALOUTVHI"   : [10,2,    1,"VCal"],
 }
@@ -135,6 +138,10 @@ finally:
     myT.Write()
     myF.Close()
 
-
-
+    pr.disable()
+    s = StringIO.StringIO()
+    sortby = 'cumulative'
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print s.getvalue()
 
