@@ -1,10 +1,10 @@
 #!/bin/env python
 
-def launchTests(args):
-  return launchTestsArgs(*args)
+def launch(args):
+  return launchArgs(*args)
 
-def launchTestsArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
-                    vt1=None,vt2=0,perchannel=False,trkdata=False,ztrim=4.0,config=False):
+def launchArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
+               vt1=None,vt2=0,perchannel=False,trkdata=False,ztrim=4.0,config=False):
   import datetime,os,sys
   import subprocess
   from subprocess import CalledProcessError
@@ -16,15 +16,17 @@ def launchTestsArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
 
   scanType = "vt1"
   dataType = "VT1Threshold"
+  dirPath  = None
 
-  #Build Commands
+  # Build Commands
   setupCmds = []
-  preCmd = None
-  cmd = ["%s"%(tool),"-s%d"%(slot),"-g%d"%(link)]
+  preCmd    = None
+  cmd       = ["time", "%s"%(tool),"-s%d"%(slot),"-g%d"%(link)]
+
   if tool == "ultraScurve.py":
     scanType = "scurve"
     dataType = "SCurve"
-    dirPath = "%s/%s/%s/"%(dataPath,chamber_config[link],scanType)
+    dirPath  = "%s/%s/%s/"%(dataPath,chamber_config[link],scanType)
     setupCmds.append( ["mkdir","-p",dirPath+startTime] )
     setupCmds.append( ["unlink",dirPath+"current"] )
     setupCmds.append( ["ln","-s",startTime,dirPath+"current"] )
@@ -38,7 +40,7 @@ def launchTestsArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
   elif tool == "trimChamber.py":
     scanType = "trim"
     dataType = None
-    preCmd = ["confChamber.py","-s%d"%(slot),"-g%d"%(link)]
+    preCmd   = ["confChamber.py","-s%d"%(slot),"-g%d"%(link)]
     if vt1 in range(256):
       preCmd.append("--vt1=%d"%(vt1))
       pass
@@ -81,7 +83,7 @@ def launchTestsArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
     pass
   elif tool == "fastLatency.py":
     scanType = "latency/trig"
-    dirPath = "%s/%s/%s/"%(dataPath,chamber_config[link],scanType)
+    dirPath  = "%s/%s/%s/"%(dataPath,chamber_config[link],scanType)
     setupCmds.append( ["mkdir","-p",dirPath+startTime] )
     setupCmds.append( ["unlink",dirPath+"current"] )
     setupCmds.append( ["ln","-s",startTime,dirPath+"current"] )
@@ -91,7 +93,7 @@ def launchTestsArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
     pass
   elif tool == "ultraLatency.py":
     scanType = "latency/trk"
-    dirPath = "%s/%s/%s/"%(dataPath,chamber_config[link],scanType)
+    dirPath  = "%s/%s/%s/"%(dataPath,chamber_config[link],scanType)
     setupCmds.append( ["mkdir","-p",dirPath+startTime] )
     setupCmds.append( ["unlink",dirPath+"current"] )
     setupCmds.append( ["ln","-s",startTime,dirPath+"current"] )
@@ -102,16 +104,29 @@ def launchTestsArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
     cmd.append( "--nevts=%d"%(nevts) )
     cmd.append( "--mspl=1" )
     pass
+  elif tool == "dacScan.py":
+    scanType = "dacscan"
+    dirPath  = "%s/%s/%s/"%(dataPath,chamber_config[link],scanType)
+    setupCmds.append( ["mkdir","-p",dirPath+startTime] )
+    setupCmds.append( ["unlink",dirPath+"current"] )
+    setupCmds.append( ["ln","-s",startTime,dirPath+"current"] )
+    dirPath = dirPath+startTime
+    cmd.append( "--filename=%s/DACScanData.root"%dirPath )
+    cmd.append( "--nevts=%d"%(nevts) )
+    pass
 
-  #Execute Commands
+  # Execute Commands
   try:
     for setupCmd in setupCmds:
+      print setupCmd
       runCommand(setupCmd)
       pass
     log = file("%s/scanLog.log"%(dirPath),"w")
     if preCmd and config:
+      print preCmd
       runCommand(preCmd,log)
       pass
+    print cmd
     runCommand(cmd,log)
   except CalledProcessError as e:
     print "Caught exception",e
@@ -149,7 +164,7 @@ if __name__ == '__main__':
   envCheck('DATA_PATH')
   envCheck('BUILD_HOME')
 
-  if options.tool not in ["trimChamber.py","ultraThreshold.py","ultraLatency.py","fastLatency.py","ultraScurve.py"]:
+  if options.tool not in ["trimChamber.py","ultraThreshold.py","ultraLatency.py","fastLatency.py","ultraScurve.py","dacScan.py"]:
     print "Invalid tool specified"
     exit(1)
 
@@ -173,7 +188,7 @@ if __name__ == '__main__':
     print "Running jobs in serial mode"
     for link in chamber_config.keys():
       chamber = chamber_config[link]
-      launchTests([options.tool,options.slot,link,chamber,options.vt2,options.perchannel,options.trkdata,options.ztrim,options.config])
+      launch([options.tool,options.slot,link,chamber,options.vt2,options.perchannel,options.trkdata,options.ztrim,options.config])
       pass
     pass
   else:
@@ -184,7 +199,7 @@ if __name__ == '__main__':
     pool = Pool(12)
     signal.signal(signal.SIGINT, original_sigint_handler)
     try:
-      res = pool.map_async(launchTests,
+      res = pool.map_async(launch,
                            itertools.izip([options.tool for x in range(len(chamber_config))],
                                           [options.slot for x in range(len(chamber_config))],
                                           chamber_config.keys(),
