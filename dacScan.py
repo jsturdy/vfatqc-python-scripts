@@ -39,11 +39,16 @@ dacinval = array( 'i', [ 0 ] )
 myT.Branch( 'dacinval', dacinval, 'dacinval/I' )
 dacoutval = array( 'i', [ 0 ] )
 myT.Branch( 'dacoutval', dacoutval, 'dacoutval/I' )
+convdacval = array( 'i', [ 0 ] )
+myT.Branch( 'convdacval', convdacval, 'convdacval/I' )
 vfatN = array( 'i', [ 0 ] )
 myT.Branch( 'vfatN', vfatN, 'vfatN/I' )
 link = array( 'i', [ 0 ] )
 myT.Branch( 'link', link, 'link/I' )
 link[0] = options.gtx
+shelf = array( 'i', [ 0 ] )
+myT.Branch( 'shelf', shelf, 'shelf/I' )
+shelf[0] = options.shelf
 utime = array( 'i', [ 0 ] )
 myT.Branch( 'utime', utime, 'utime/I' )
 
@@ -111,7 +116,8 @@ try:
                 for sample in range(N_EVENTS):
                     for col in range(3):
                         rawval       = readRegister(ohboard,"GEM_AMC.OH.OH%d.ADC.%s"%(options.gtx,adcReg[col][dacmode[dactype][2]]))
-                        dacoutval[0] = (rawval >> 6)
+                        dacoutval[0]  = (rawval >> 6)
+                        convdacval[0] = dacoutval[0]*(0.977/1000.)*2
                         vfatN[0]     = ((col*8)+i)
                         myT.Fill()
                         pass
