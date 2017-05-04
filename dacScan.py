@@ -39,11 +39,16 @@ dacinval = array( 'i', [ 0 ] )
 myT.Branch( 'dacinval', dacinval, 'dacinval/I' )
 dacoutval = array( 'i', [ 0 ] )
 myT.Branch( 'dacoutval', dacoutval, 'dacoutval/I' )
+convdacval = array( 'i', [ 0 ] )
+myT.Branch( 'convdacval', convdacval, 'convdacval/I' )
 vfatN = array( 'i', [ 0 ] )
 myT.Branch( 'vfatN', vfatN, 'vfatN/I' )
 link = array( 'i', [ 0 ] )
 myT.Branch( 'link', link, 'link/I' )
 link[0] = options.gtx
+shelf = array( 'i', [ 0 ] )
+myT.Branch( 'shelf', shelf, 'shelf/I' )
+shelf[0] = options.shelf
 utime = array( 'i', [ 0 ] )
 myT.Branch( 'utime', utime, 'utime/I' )
 
@@ -57,15 +62,15 @@ ohboard = getOHObject(options.slot,options.gtx,options.shelf,options.debug)
 
 N_EVENTS = Nev[0]
 dacmode = {
-    "IPREAMPIN"   : [1, None, 0,"IPreampIn"],
-    "IPREAMPFEED" : [2, None, 0,"IPreampFeed"],
-    "IPREAMPOUT"  : [3, None, 0,"IPreampOut"],
-    "ISHAPER"     : [4, None, 0,"IShaper"],
-    "ISHAPERFEED" : [5, None, 0,"IShaperFeed"],
-    "ICOMP"       : [6, None, 0,"IComp"],
-    "VTHRESHOLD1" : [7, None, 1,"VThreshold1"],
-    "VTHRESHOLD2" : [8, None, 1,"VThreshold2"],
-    "VCAL"        : [9, None, 1,"VCal"],
+    # "IPREAMPIN"   : [1, None, 0,"IPreampIn"],
+    # "IPREAMPFEED" : [2, None, 0,"IPreampFeed"],
+    # "IPREAMPOUT"  : [3, None, 0,"IPreampOut"],
+    # "ISHAPER"     : [4, None, 0,"IShaper"],
+    # "ISHAPERFEED" : [5, None, 0,"IShaperFeed"],
+    # "ICOMP"       : [6, None, 0,"IComp"],
+    # "VTHRESHOLD1" : [7, None, 1,"VThreshold1"],
+    # "VTHRESHOLD2" : [8, None, 1,"VThreshold2"],
+    # "VCAL"        : [9, None, 1,"VCal"],
     "CALOUTVLOW"  : [10,1,    1,"VCal"],
     "CALOUTVHI"   : [10,2,    1,"VCal"],
 }
@@ -111,7 +116,8 @@ try:
                 for sample in range(N_EVENTS):
                     for col in range(3):
                         rawval       = readRegister(ohboard,"GEM_AMC.OH.OH%d.ADC.%s"%(options.gtx,adcReg[col][dacmode[dactype][2]]))
-                        dacoutval[0] = (rawval >> 6)
+                        dacoutval[0]  = (rawval >> 6)
+                        convdacval[0] = dacoutval[0]*(0.977/1000.)*2
                         vfatN[0]     = ((col*8)+i)
                         myT.Fill()
                         pass
