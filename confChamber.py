@@ -41,23 +41,27 @@ print 'opened connection'
 
 biasAllVFATs(ohboard,options.gtx,0x0,enable=False)
 print 'biased VFATs'
-writeAllVFATs(ohboard, options.gtx, "VThreshold1", options.vt1, 0)
+writeAllVFATs(ohboard, options.gtx, "VThreshold1", options.vt1)
 print 'Set VThreshold1 to %i'%options.vt1
 
 if options.run:
-    writeAllVFATs(ohboard, options.gtx, "ContReg0",    0x37,        0)
+    writeAllVFATs(ohboard, options.gtx, "ContReg0",    0x37)
     print 'VFATs set to run mode'
 else:
-    writeAllVFATs(ohboard, options.gtx, "ContReg0",    0x36,        0)
+    writeAllVFATs(ohboard, options.gtx, "ContReg0",    0x36)
 
 if options.filename:
     try:
         print 'Configuring Trims with %s'%options.filename
         inF = r.TFile(options.filename)
 
+        # change this to bundle write operations
+        # confRegs = ndict()
         for event in inF.scurveFitTree :
             writeVFAT(ohboard,options.gtx,int(event.vfatN),"VFATChannels.ChanReg%d"%(int(event.vfatCH)),int(event.trimDAC)+32*int(event.mask))
-            writeVFAT(ohboard, options.gtx, int(event.vfatN), "ContReg3", int(event.trimRange),0)
+            writeVFAT(ohboard, options.gtx, int(event.vfatN), "ContReg3", int(event.trimRange))
+            pass
+        # writeRegisterList(ohboard,confRegs)
     except Exception as e:
         print '%s does not seem to exist'%options.filename
         print e
@@ -82,8 +86,8 @@ if options.vfatConfig:
 
         for event in vfatTree :
             print 'Set link %d VFAT%d VThreshold1 to %i'%(options.gtx,event.vfatN,event.vt1+options.vt1bump)
-            writeVFAT(ohboard, options.gtx, int(event.vfatN), "VThreshold1", int(event.vt1+options.vt1bump),0)
-            writeVFAT(ohboard, options.gtx, int(event.vfatN), "ContReg3", int(event.trimRange),0)
+            writeVFAT(ohboard, options.gtx, int(event.vfatN), "VThreshold1", int(event.vt1+options.vt1bump))
+            writeVFAT(ohboard, options.gtx, int(event.vfatN), "ContReg3", int(event.trimRange))
     except Exception as e:
         print '%s does not seem to exist'%options.filename
         print e
