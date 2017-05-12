@@ -43,8 +43,6 @@ dacinval = array( 'i', [ 0 ] )
 myT.Branch( 'dacinval', dacinval, 'dacinval/I' )
 dacoutval = array( 'i', [ 0 ] )
 myT.Branch( 'dacoutval', dacoutval, 'dacoutval/I' )
-convdacval = array( 'i', [ 0 ] )
-myT.Branch( 'convdacval', convdacval, 'convdacval/I' )
 vfatN = array( 'i', [ 0 ] )
 myT.Branch( 'vfatN', vfatN, 'vfatN/I' )
 vfatID = vector('string')()
@@ -121,8 +119,7 @@ try:
                 for sample in range(N_EVENTS):
                     for col in range(3):
                         rawval       = readRegister(ohboard,"GEM_AMC.OH.OH%d.ADC.%s"%(options.gtx,adcReg[col][dacmode[dactype][2]]))
-                        dacoutval[0]  = (rawval >> 6)
-                        convdacval[0] = dacoutval[0]*(0.977/1000.)*2
+                        dacoutval[0] = (rawval >> 6)
                         vfatN[0]     = ((col*8)+i)
                         vfatID[0]    = chipIDs[vfatN[0]]
                         myT.Fill()
@@ -155,4 +152,3 @@ finally:
     ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
     ps.print_stats()
     print s.getvalue()
-
