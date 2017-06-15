@@ -26,17 +26,10 @@ for fi in files:
         "9CALOUTVLOW"  : "V_{cal out, LOW}" ,
         "9CALOUTVHI"   : "V_{cal out, HI}"  ,
         }
-<<<<<<< HEAD
-    
-    rawhist  = ndict()
-    convhist = ndict()
-    
-=======
 
     rawhist  = ndict()
     convhist = ndict()
 
->>>>>>> 4749860219d5077072e68fb78973a4d591b41be6
     # for vfat in range(24):
     vfat = 0
     for dac in sorted(dacmode.keys()):
