@@ -114,7 +114,7 @@ try:
                         writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0", writeval)
                     else:
                         writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0", 0x37)
-                        pass                    
+                        pass
                     pass
                 for sample in range(N_EVENTS):
                     for col in range(3):
@@ -137,7 +137,7 @@ try:
             sys.stdout.flush()
             pass
         pass
-    
+
 except Exception as e:
     myT.AutoSave("SaveSelf")
     print "An exception occurred", e
