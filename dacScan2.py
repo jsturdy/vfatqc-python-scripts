@@ -4,6 +4,27 @@ Script to measure the DAC values on the VFATs
 By: Jared Sturdy (sturdy@cern.ch)
 """
 
+def printUpdate(counter,total,stepSize,width,header,new=False,special=None):
+    import sys,time
+    compper = 100.*(1.0*counter/total)
+    comp = "%2d %%"%(compper)
+    counts = counter/stepSize
+    clear  = '\033[K'
+    backup = '\033[1A'
+    if (special):
+        backup  = '\033[1A'
+        sys.stdout.write("\n%si'm special! %s\n%s%s"%(clear,special,backup,backup))
+        pass
+    if new:
+        sys.stdout.write("\n%s[%s: %s%s %s]"%(clear,header,"-"*counts," "*(width-counts),comp))
+    else:
+        sys.stdout.write("\n%s%s[%s: %s%s %s]"%(backup,clear,header,"-"*counts," "*(width-counts),comp))
+        pass
+    sys.stdout.flush()
+    sys.stdout.write("\b"*(width+1-counts+1+len(comp)))
+    sys.stdout.flush()
+    return
+
 import sys
 from array import array
 from gempython.tools.vfat_user_functions_uhal import *
@@ -67,15 +88,15 @@ ohboard = getOHObject(options.slot,options.gtx,options.shelf,options.debug)
 
 N_EVENTS = Nev[0]
 dacmode = {
-    # "IPREAMPIN"   : [1, None, 0,"IPreampIn"],
-    # "IPREAMPFEED" : [2, None, 0,"IPreampFeed"],
-    # "IPREAMPOUT"  : [3, None, 0,"IPreampOut"],
-    # "ISHAPER"     : [4, None, 0,"IShaper"],
-    # "ISHAPERFEED" : [5, None, 0,"IShaperFeed"],
-    # "ICOMP"       : [6, None, 0,"IComp"],
-    # "VTHRESHOLD1" : [7, None, 1,"VThreshold1"],
-    # "VTHRESHOLD2" : [8, None, 1,"VThreshold2"],
-    # "VCAL"        : [9, None, 1,"VCal"],
+    "IPREAMPIN"   : [1, None, 0,"IPreampIn"],
+    "IPREAMPFEED" : [2, None, 0,"IPreampFeed"],
+    "IPREAMPOUT"  : [3, None, 0,"IPreampOut"],
+    "ISHAPER"     : [4, None, 0,"IShaper"],
+    "ISHAPERFEED" : [5, None, 0,"IShaperFeed"],
+    "ICOMP"       : [6, None, 0,"IComp"],
+    "VTHRESHOLD1" : [7, None, 1,"VThreshold1"],
+    "VTHRESHOLD2" : [8, None, 1,"VThreshold2"],
+    "VCAL"        : [9, None, 1,"VCal"],
     "CALOUTVHI"   : [10,1,    1,"VCal"],
     "CALOUTVLOW"  : [10,2,    1,"VCal"],
 }
@@ -85,6 +106,10 @@ adcReg = {
     1:["VAUX.VAL_6", "VAUX.VAL_5"],
     2:["VAUX.VAL_13","VPVN"],
 }
+
+toolbar_width = 100
+total   = 256*8*N_EVENTS*3
+stepSize = total/toolbar_width
 
 try:
     # calibration correction seems to already be applied
@@ -96,26 +121,34 @@ try:
     #     pass
     writeAllVFATs(ohboard, options.gtx, "ContReg0", 0x36)
     chipIDs = getAllChipIDs(ohboard,options.gtx)
+
+    print("Looping over VFAT2 DACs")
+
     for dactype in dacmode.keys():
+        counter = 0
+        printUpdate(counter,total,stepSize,toolbar_width,"%s"%(dactype),True)
         sys.stdout.flush()
         dacname[0] = dactype
         dac = dacmode[dactype]
+
         for val in range(256):
             dacinval[0]  = val
             writeAllVFATs(ohboard, options.gtx, dacmode[dactype][3], val)
+
             for i in range(8):
                 cr0val = []
-                for col in range(3):
-                    writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg1", dac[0])
-                    if dac[1]:
-                        # cr0val.append(readVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0"))
-                        cr0val.append(0x37)
-                        writeval = cr0val[col]|(dac[1]<<6)
-                        writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0", writeval)
-                    else:
-                        writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0", 0x37)
-                        pass
+                colmask = (((((0x1<<8)|0x1)<<8)|0x1)<<i)
+                colmask = 0xfffffff&(~colmask)
+                writeAllVFATs(ohboard, options.gtx, "ContReg1", dac[0], mask=colmask)
+
+                if dac[1] > 0:
+                    cr0val = 0x37
+                    writeval = cr0val|(dac[1]<<6)
+                    writeAllVFATs(ohboard, options.gtx, "ContReg0", writeval,mask=colmask)
+                else:
+                    writeAllVFATs(ohboard, options.gtx, "ContReg0", 0x37,mask=colmask)
                     pass
+
                 for sample in range(N_EVENTS):
                     for col in range(3):
                         rawval       = readRegister(ohboard,"GEM_AMC.OH.OH%d.ADC.%s"%(options.gtx,adcReg[col][dacmode[dactype][2]]))
@@ -123,19 +156,24 @@ try:
                         vfatN[0]     = ((col*8)+i)
                         vfatID[0]    = chipIDs[vfatN[0]]
                         myT.Fill()
+
+                        if (counter%stepSize == 0):
+                            printUpdate(counter,total,stepSize,toolbar_width,"iEta%d"%(i))
+                            pass
+                        counter+=1
                         pass
                     pass
-                for col in range(3):
-                    # if dac[1]:
-                    #     writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0", cr0val[col])
-                    #     pass
-                    writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg0", 0x0)
-                    writeVFAT(ohboard, options.gtx, ((col*8)+i), "ContReg1", 0x0)
-                    pass
+
+                writeAllVFATs(ohboard, options.gtx, "ContReg0", 0x0, mask=colmask)
+                writeAllVFATs(ohboard, options.gtx, "ContReg1", 0x0, mask=colmask)
                 pass
+
             myT.AutoSave("SaveSelf")
             sys.stdout.flush()
             pass
+
+        # reset the DAC value after the loop?
+        writeAllVFATs(ohboard, options.gtx, dacmode[dactype][3], 0)
         pass
 
 except Exception as e:
