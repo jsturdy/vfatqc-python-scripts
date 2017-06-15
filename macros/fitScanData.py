@@ -18,6 +18,7 @@ def fitScanData(treeFile):
         scanFits[2][vfat] = np.zeros(128)
         scanFits[3][vfat] = np.zeros(128)
         scanFits[4][vfat] = np.zeros(128)
+        scanFits[5][vfat] = np.zeros(128)
         for ch in range(0,128):
             scanHistos[vfat][ch] = r.TH1D('scurve_%i_%i_h'%(vfat,ch),'scurve_%i_%i_h'%(vfat,ch),254,0.5,254.5)
             scanCount[vfat][ch] = 0
@@ -54,6 +55,7 @@ def fitScanData(treeFile):
                 fitResult = scanHistos[vfat][ch].Fit('myERF','SQ')
                 #fitStatus = fitResult.Status()
                 fitChi2 = fitTF1.GetChisquare()
+                fitNDF = fitTF1.GetNDF()
                 #print fitChi2
                 stepN +=1
                 fitGoodN+=1
@@ -66,6 +68,7 @@ def fitScanData(treeFile):
                     scanFits[2][vfat][ch] = fitTF1.GetParameter(2)
                     scanFits[3][vfat][ch] = fitChi2
                     scanFits[4][vfat][ch] = scanCount[vfat][ch]
+                    scanFits[5][vfat][ch] = fitNDF
                     MinChi2Temp = fitChi2
                     pass
                 if (fitTF1.GetParameter(0) == 8+stepN*8):
@@ -74,6 +77,7 @@ def fitScanData(treeFile):
                     scanFits[2][vfat][ch] = -999.9
                     scanFits[3][vfat][ch] = -999999999.9
                     scanFits[4][vfat][ch] = scanCount[vfat][ch]
+                    scanFits[5][vfat][ch] = -999999
                     MinChi2Temp = fitChi2
                     pass
                 if (MinChi2Temp < 50): break

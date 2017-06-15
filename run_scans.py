@@ -4,7 +4,8 @@ def launch(args):
   return launchArgs(*args)
 
 def launchArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
-               vt1=None,vt2=0,perchannel=False,trkdata=False,ztrim=4.0,config=False):
+               vt1=None,vt2=0,mspl=None,
+               perchannel=False,trkdata=False,ztrim=4.0,config=False):
   import datetime,os,sys
   import subprocess
   from subprocess import CalledProcessError
@@ -32,6 +33,8 @@ def launchArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
     setupCmds.append( ["ln","-s",startTime,dirPath+"current"] )
     dirPath = dirPath+startTime
     cmd.append( "--filename=%s/SCurveData.root"%dirPath )
+    if mspl:
+      cmd.append( "--mspl=%d"%(mspl) )
     preCmd = ["confChamber.py","-s%d"%(slot),"-g%d"%(link)]
     if vt1 in range(256):
       preCmd.append("--vt1=%d"%(vt1))
@@ -90,6 +93,8 @@ def launchArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
     dirPath = dirPath+startTime
     cmd.append( "--filename=%s/FastLatencyScanData.root"%dirPath )
     cmd.append( "--nevts=%d"%(nevts) )
+    if mspl:
+      cmd.append( "--mspl=%d"%(mspl) )
     pass
   elif tool == "ultraLatency.py":
     scanType = "latency/trk"
@@ -102,7 +107,8 @@ def launchArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
     cmd.append( "--scanmin=%d"%(scanmin) )
     cmd.append( "--scanmax=%d"%(scanmax) )
     cmd.append( "--nevts=%d"%(nevts) )
-    cmd.append( "--mspl=1" )
+    if mspl:
+      cmd.append( "--mspl=%d"%(mspl) )
     pass
   elif tool == "dacScan.py":
     scanType = "dacscan"
@@ -154,6 +160,8 @@ if __name__ == '__main__':
                     help="Specify VT1 to use", metavar="vt1")
   parser.add_option("--vt2", type="int", dest="vt2", default=0,
                     help="Specify VT2 to use", metavar="vt2")
+  parser.add_option("--mspl", type="int", dest = "MSPL", default = 4,
+                    help="Specify MSPL.  Must be in the range 1-8", metavar="MSPL")
   parser.add_option("--perchannel", action="store_true", dest="perchannel",
                     help="Run a per-channel VT1 scan", metavar="perchannel")
   parser.add_option("--trkdata", action="store_true", dest="trkdata",
@@ -178,6 +186,7 @@ if __name__ == '__main__':
                          [options.nevts   for x in range(len(chamber_config))],
                          [options.vt1     for x in range(len(chamber_config))],
                          [options.vt2     for x in range(len(chamber_config))],
+                         [options.MSPL    for x in range(len(chamber_config))],
                          [options.perchannel for x in range(len(chamber_config))],
                          [options.trkdata for x in range(len(chamber_config))],
                          [options.ztrim   for x in range(len(chamber_config))],
@@ -188,7 +197,9 @@ if __name__ == '__main__':
     print "Running jobs in serial mode"
     for link in chamber_config.keys():
       chamber = chamber_config[link]
-      launch([options.tool,options.slot,link,chamber,options.vt2,options.perchannel,options.trkdata,options.ztrim,options.config])
+      launch([options.tool,options.slot,link,chamber,
+              options.vt2,options.MSPL,
+              options.perchannel,options.trkdata,options.ztrim,options.config])
       pass
     pass
   else:
@@ -209,6 +220,7 @@ if __name__ == '__main__':
                                           [options.nevts   for x in range(len(chamber_config))],
                                           [options.vt1     for x in range(len(chamber_config))],
                                           [options.vt2     for x in range(len(chamber_config))],
+                                          [options.MSPL    for x in range(len(chamber_config))],
                                           [options.perchannel for x in range(len(chamber_config))],
                                           [options.trkdata for x in range(len(chamber_config))],
                                           [options.ztrim   for x in range(len(chamber_config))],
