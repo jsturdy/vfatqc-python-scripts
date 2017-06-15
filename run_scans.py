@@ -4,7 +4,8 @@ def launch(args):
   return launchArgs(*args)
 
 def launchArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
-               vt1=None,vt2=0,mspl=None,perchannel=False,trkdata=False,ztrim=4.0,config=False):
+               vt1=None,vt2=0,mspl=None,
+               perchannel=False,trkdata=False,ztrim=4.0,config=False):
   import datetime,os,sys
   import subprocess
   from subprocess import CalledProcessError
@@ -196,7 +197,9 @@ if __name__ == '__main__':
     print "Running jobs in serial mode"
     for link in chamber_config.keys():
       chamber = chamber_config[link]
-      launch([options.tool,options.slot,link,chamber,options.vt2,options.MSPL,options.perchannel,options.trkdata,options.ztrim,options.config])
+      launch([options.tool,options.slot,link,chamber,
+              options.vt2,options.MSPL,
+              options.perchannel,options.trkdata,options.ztrim,options.config])
       pass
     pass
   else:
