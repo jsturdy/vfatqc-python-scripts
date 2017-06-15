@@ -182,7 +182,7 @@ try:
         # reset the DAC value after the loop?
         writeAllVFATs(ohboard, options.gtx, dacmode[dactype][3], 0)
         pass
-    
+
 except Exception as e:
     myT.AutoSave("SaveSelf")
     print "An exception occurred", e
