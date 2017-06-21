@@ -132,7 +132,8 @@ try:
             writeAllVFATs(ohboard, options.gtx, dacmode[dactype][3], val)
             for i in range(8):
                 cr0val = []
-                colmask = (((((0x1<<8)|0x1)<<8)|0x1)<<i)
+                # colmask = (((((0x1<<8)|0x1)<<8)|0x1)<<i)
+                colmask = (((0x1<<8)<<8)<<i)
                 colmask = 0xfffffff&(~colmask)
                 writeAllVFATs(ohboard, options.gtx, "ContReg1", dac[0], mask=colmask)
                 if dac[1]:
@@ -156,7 +157,8 @@ try:
                 for sample in range(N_EVENTS):
                     for col in range(3):
                         rawval       = readRegister(ohboard,"GEM_AMC.OH.OH%d.ADC.%s"%(options.gtx,adcReg[col][dacmode[dactype][2]]))
-                        dacoutval[0] = (rawval >> 6)
+                        # dacoutval[0] = (rawval >> 6)
+                        dacoutval[0] = (rawval)
                         vfatN[0]     = ((col*8)+i)
                         vfatID[0]    = chipIDs[vfatN[0]]
                         myT.Fill()
