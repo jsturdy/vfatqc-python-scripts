@@ -141,6 +141,16 @@ def launchArgs(tool, slot, link, chamber, scanmin, scanmax, nevts,
     cmd.append( "--filename=%s/DACScanData.root"%dirPath )
     cmd.append( "--nevts=%d"%(nevts) )
     pass
+  elif tool == "dacScan.py":
+    scanType = "dacscan"
+    dirPath  = "%s/%s/%s/"%(dataPath,chamber_config[link],scanType)
+    setupCmds.append( ["mkdir","-p",dirPath+startTime] )
+    setupCmds.append( ["unlink",dirPath+"current"] )
+    setupCmds.append( ["ln","-s",startTime,dirPath+"current"] )
+    dirPath = dirPath+startTime
+    cmd.append( "--filename=%s/DACScanData.root"%dirPath )
+    cmd.append( "--nevts=%d"%(nevts) )
+    pass
 
   # Execute Commands
   try:
