@@ -3,13 +3,14 @@
 def launchTests(args):
   return launchTestsArgs(*args)
 
-def launchTestsArgs(tool, shelf, slot, link, chamber, scanmin, scanmax, nevts,
+def launchTestsArgs(tool, shelf, slot, link, chamber, vfatmask, scanmin, scanmax, nevts, stepSize=1,
                     vt1=None,vt2=0,mspl=None,perchannel=False,trkdata=False,ztrim=4.0,
-                    config=False,amc13local=False,t3trig=False, randoms=0, throttle=0):
+                    config=False,amc13local=False,t3trig=False, randoms=0, throttle=0,
+                    internal=False, debug=False):
   import datetime,os,sys
   import subprocess
   from subprocess import CalledProcessError
-  from chamberInfo import chamber_config
+  from mapping.chamberInfo import chamber_config
   from gempython.utils.wrappers import runCommand
 
   startTime = datetime.datetime.now().strftime("%Y.%m.%d.%H.%M")
@@ -21,7 +22,9 @@ def launchTestsArgs(tool, shelf, slot, link, chamber, scanmin, scanmax, nevts,
   #Build Commands
   setupCmds = []
   preCmd = None
-  cmd = ["%s"%(tool),"-s%d"%(slot),"-g%d"%(link),"--shelf=%i"%(shelf)]
+  cmd = ["%s"%(tool),"-s%i"%(slot),"-g%i"%(link),"--shelf=%i"%(shelf), "--nevts=%i"%(nevts), "--vfatmask=0x%x"%(vfatmask)]
+  if debug:
+    cmd.append( "--debug")
   if tool == "ultraScurve.py":
     scanType = "scurve"
     dataType = "SCurve"
@@ -32,18 +35,18 @@ def launchTestsArgs(tool, shelf, slot, link, chamber, scanmin, scanmax, nevts,
     dirPath = dirPath+startTime
     cmd.append( "--filename=%s/SCurveData.root"%dirPath )
     if mspl:
-      cmd.append( "--mspl=%d"%(mspl) )
-    preCmd = ["confChamber.py","-s%d"%(slot),"-g%d"%(link)]
+      cmd.append( "--mspl=%i"%(mspl) )
+    preCmd = ["confChamber.py","-s%i"%(slot),"-g%i"%(link),"--shelf=%i"%(shelf)]
     if vt1 in range(256):
-      preCmd.append("--vt1=%d"%(vt1))
+      preCmd.append("--vt1=%i"%(vt1))
       pass
     pass
   elif tool == "trimChamber.py":
     scanType = "trim"
     dataType = None
-    preCmd = ["confChamber.py","-s%d"%(slot),"-g%d"%(link)]
+    preCmd = ["confChamber.py","-s%i"%(slot),"-g%i"%(link),"--shelf=%i"%(shelf)]
     if vt1 in range(256):
-      preCmd.append("--vt1=%d"%(vt1))
+      preCmd.append("--vt1=%i"%(vt1))
       pass
     dirPath = "%s/%s/%s/z%f/"%(dataPath,chamber_config[link],scanType,ztrim)
     setupCmds.append( ["mkdir","-p",dirPath+startTime] )
@@ -52,14 +55,14 @@ def launchTestsArgs(tool, shelf, slot, link, chamber, scanmin, scanmax, nevts,
     dirPath = dirPath+startTime
     cmd.append("--ztrim=%f"%(ztrim))
     if vt1 in range(256):
-      cmd.append("--vt1=%d"%(vt1))
+      cmd.append("--vt1=%i"%(vt1))
       pass
     cmd.append( "--dirPath=%s"%dirPath )
     pass
   elif tool == "ultraThreshold.py":
     scanType = "threshold"
     if vt2 in range(256):
-      cmd.append("--vt2=%d"%(vt2))
+      cmd.append("--vt2=%i"%(vt2))
       pass
     if perchannel:
       cmd.append("--perchannel")
@@ -90,9 +93,8 @@ def launchTestsArgs(tool, shelf, slot, link, chamber, scanmin, scanmax, nevts,
     setupCmds.append( ["ln","-s",startTime,dirPath+"current"] )
     dirPath = dirPath+startTime
     cmd.append( "--filename=%s/FastLatencyScanData.root"%dirPath )
-    cmd.append( "--nevts=%d"%(nevts) )
     if mspl:
-      cmd.append( "--mspl=%d"%(mspl) )
+      cmd.append( "--mspl=%i"%(mspl) )
     pass
   elif tool == "ultraLatency.py":
     scanType = "latency/trk"
@@ -102,12 +104,14 @@ def launchTestsArgs(tool, shelf, slot, link, chamber, scanmin, scanmax, nevts,
     setupCmds.append( ["ln","-s",startTime,dirPath+"current"] )
     dirPath = dirPath+startTime
     cmd.append( "--filename=%s/LatencyScanData.root"%dirPath )
-    cmd.append( "--scanmin=%d"%(scanmin) )
-    cmd.append( "--scanmax=%d"%(scanmax) )
-    cmd.append( "--nevts=%d"%(nevts) )
+    cmd.append( "--scanmin=%i"%(scanmin) )
+    cmd.append( "--scanmax=%i"%(scanmax) )
     cmd.append( "--throttle=%i"%(throttle) )
+    if stepSize > 0:
+      cmd.append( "--stepSize=%i"%(stepSize) )
+      pass
     if mspl:
-      cmd.append( "--mspl=%d"%(mspl) )
+      cmd.append( "--mspl=%i"%(mspl) )
       pass
     if amc13local:
       cmd.append( "--amc13local")
@@ -117,6 +121,9 @@ def launchTestsArgs(tool, shelf, slot, link, chamber, scanmin, scanmax, nevts,
       pass
     if randoms > 0:
       cmd.append( "--randoms=%i"%(randoms))
+      pass
+    if internal:
+      cmd.append( "--internal")
       pass
     pass
 
@@ -141,7 +148,7 @@ if __name__ == '__main__':
   import subprocess
   import itertools
   from multiprocessing import Pool, freeze_support
-  from chamberInfo import chamber_config
+  from mapping.chamberInfo import chamber_config, chamber_vfatMask
   from gempython.utils.wrappers import envCheck
 
   from qcoptions import parser
@@ -150,6 +157,8 @@ if __name__ == '__main__':
                     help="Set up for using AMC13 local trigger generator", metavar="amc13local")
   parser.add_option("--config", action="store_true", dest="config",
                     help="Configure chambers before running scan", metavar="config")
+  parser.add_option("--internal", action="store_true", dest="internal",
+                    help="Run a latency scan using the internal calibration pulse", metavar="internal")
   parser.add_option("--perchannel", action="store_true", dest="perchannel",
                     help="Run a per-channel VT1 scan", metavar="perchannel")
   parser.add_option("--randoms", type="int", default=0, dest="randoms",
@@ -157,6 +166,8 @@ if __name__ == '__main__':
                     metavar="randoms")
   parser.add_option("--series", action="store_true", dest="series",
                     help="Run tests in series (default is false)", metavar="series")
+  parser.add_option("--stepSize", type="int", dest="stepSize", 
+                    help="Supply a step size to the latency scan from scanmin to scanmax", metavar="stepSize", default=1)
   parser.add_option("--t3trig", action="store_true", dest="t3trig",
                     help="Set up for using AMC13 T3 trigger input", metavar="t3trig")
   parser.add_option("--throttle", type="int", default=0, dest="throttle",
@@ -186,9 +197,11 @@ if __name__ == '__main__':
                          [options.slot for x in range(len(chamber_config))],
                          chamber_config.keys(),
                          chamber_config.values(),
+                         [hex(vfatmask) for vfatmask in chamber_vfatMask.values()],
                          [options.scanmin for x in range(len(chamber_config))],
-                         [options.scanmax for x in range(len(chamber_config))],
+                         [options.scanmax for x in range(len(chamber_config))], 
                          [options.nevts   for x in range(len(chamber_config))],
+                         [options.stepSize for x in range(len(chamber_config))],
                          [options.vt1     for x in range(len(chamber_config))],
                          [options.vt2     for x in range(len(chamber_config))],
                          [options.MSPL    for x in range(len(chamber_config))],
@@ -200,17 +213,26 @@ if __name__ == '__main__':
                          [options.t3trig  for x in range(len(chamber_config))],
                          [options.randoms for x in range(len(chamber_config))],
                          [options.throttle for x in range(len(chamber_config))],
+                         [options.internal for x in range(len(chamber_config))],
+                         [options.debug for x in range(len(chamber_config))]
                          )
             )
   if options.series:
     print "Running jobs in serial mode"
     for link in chamber_config.keys():
       chamber = chamber_config[link]
+      vfatMask = chamber_vfatMask[link]
       launchTests([ options.tool,
                     options.shelf,
                     options.slot,
                     link,
                     chamber,
+                    vfatMask,
+                    options.scanmin,
+                    options.scanmax,
+                    options.nevts, 
+                    options.stepSize,
+                    options.vt1,
                     options.vt2,
                     options.MSPL,
                     options.perchannel,
@@ -220,8 +242,10 @@ if __name__ == '__main__':
                     options.amc13local,
                     options.t3trig,
                     options.randoms,
-                    options.throttle]
-                  )
+                    options.throttle,
+                    options.internal,
+                    options.debug
+                  ])
       pass
     pass
   else:
@@ -238,9 +262,11 @@ if __name__ == '__main__':
                                           [options.slot for x in range(len(chamber_config))],
                                           chamber_config.keys(),
                                           chamber_config.values(),
+                                          chamber_vfatMask.values(),
                                           [options.scanmin for x in range(len(chamber_config))],
                                           [options.scanmax for x in range(len(chamber_config))],
                                           [options.nevts   for x in range(len(chamber_config))],
+                                          [options.stepSize for x in range(len(chamber_config))],
                                           [options.vt1     for x in range(len(chamber_config))],
                                           [options.vt2     for x in range(len(chamber_config))],
                                           [options.MSPL    for x in range(len(chamber_config))],
@@ -252,6 +278,8 @@ if __name__ == '__main__':
                                           [options.t3trig  for x in range(len(chamber_config))],
                                           [options.randoms for x in range(len(chamber_config))],
                                           [options.throttle for x in range(len(chamber_config))],
+                                          [options.internal for x in range(len(chamber_config))],
+                                          [options.debug for x in range(len(chamber_config))]
                                           )
                            )
       # timeout must be properly set, otherwise tasks will crash

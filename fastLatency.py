@@ -17,9 +17,7 @@ parser.add_option("--vt1", type="int", dest="vt1",
                   help="VThreshold1 DAC value for all VFATs", metavar="vt1", default=100)
 
 parser.set_defaults(nevts=1000)
-
 (options, args) = parser.parse_args()
-uhal.setLogLevelTo( uhal.LogLevel.WARNING )
 
 if options.MSPL not in range(1,9):
     print "Invalid MSPL specified: %d, must be in range [1,8]"%(options.MSPL)
@@ -30,6 +28,11 @@ if options.debug:
 else:
     uhal.setLogLevelTo( uhal.LogLevel.ERROR )
 
+from gempython.tools.amc_user_functions_uhal import *
+amcBoard = getAMCObject(options.slot, options.shelf, options.debug)
+printSystemSCAInfo(amcBoard, options.debug)
+printSystemTTCInfo(amcBoard, options.debug)
+
 from ROOT import TFile,TTree
 filename = options.filename
 myF = TFile(filename,'recreate')
@@ -39,6 +42,8 @@ Dly = array( 'i', [ -1 ] )
 myT.Branch( 'Dly', Dly, 'Dly/I' )
 vfatN = array( 'i', [ -1 ] )
 myT.Branch( 'vfatN', vfatN, 'vfatN/I' )
+vfatID = array( 'i', [-1] )
+myT.Branch( 'vfatID', vfatID, 'vfatID/I' ) #Hex Chip ID of VFAT
 vth = array( 'i', [ 0 ] )
 myT.Branch( 'vth', vth, 'vth/I' )
 vth1 = array( 'i', [ 0 ] )
@@ -58,28 +63,25 @@ utime[0] = int(time.time())
 
 ohboard      = getOHObject(options.slot,options.gtx,options.shelf,options.debug)
 seenTriggers = 0
-mask         = 0
 
 try:
     print "Setting trigger source"
-    # setTriggerSource(ohboard,options.gtx,0x0) # GTX
     setTriggerSource(ohboard,options.gtx,0x5) # GBT
 
     print "Setting run mode"
     writeAllVFATs(ohboard, options.gtx, "ContReg0",   0x37)
     print "Setting MSPL to %d"%(options.MSPL)
     writeAllVFATs(ohboard, options.gtx, "ContReg2",    ((options.MSPL-1)<<4))
-    # writeAllVFATs(ohboard, options.gtx, "VThreshold1", options.vt1)
 
-    vals  = readAllVFATs(ohboard, options.gtx, "VThreshold1", mask)
+    vals  = readAllVFATs(ohboard, options.gtx, "VThreshold1", 0x0)
     vt1vals =  dict(map(lambda slotID: (slotID, vals[slotID]&0xff),
                         range(0,24)))
-    vals  = readAllVFATs(ohboard, options.gtx, "VThreshold2", mask)
+    vals  = readAllVFATs(ohboard, options.gtx, "VThreshold2", 0x0)
     vt2vals =  dict(map(lambda slotID: (slotID, vals[slotID]&0xff),
                         range(0,24)))
     vthvals =  dict(map(lambda slotID: (slotID, vt2vals[slotID]-vt2vals[slotID]),
                         range(0,24)))
-    vals = readAllVFATs(ohboard, options.gtx, "ContReg2",    mask)
+    vals = readAllVFATs(ohboard, options.gtx, "ContReg2",    0x0)
     msplvals =  dict(map(lambda slotID: (slotID, (vals[slotID]>>4)&0x7),
                          range(0,24)))
 
@@ -101,6 +103,7 @@ try:
                     pass
                 Dly[0]   = dlyValue
                 vfatN[0] = vfat
+                vfatID[0] = getChipID(ohboard, options.gtx, vfat, options.debug)
                 mspl[0]  = msplvals[vfat]
                 vth1[0]  = vt1vals[vfat]
                 vth2[0]  = vt2vals[vfat]
@@ -127,4 +130,3 @@ finally:
     myF.cd()
     myT.Write()
     myF.Close()
-

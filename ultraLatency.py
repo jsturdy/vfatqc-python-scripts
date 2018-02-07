@@ -27,17 +27,16 @@ parser.add_option("--internal", action="store_true", dest="internal",
 parser.add_option("--randoms", type="int", default=0, dest="randoms",
                   help="Set up for using AMC13 local trigger generator to generate random triggers with rate specified",
                   metavar="randoms")
+parser.add_option("--stepSize", type="int", dest="stepSize", 
+                  help="Supply a step size to the latency scan from scanmin to scanmax", metavar="stepSize", default=1)
 parser.add_option("--t3trig", action="store_true", dest="t3trig",
                   help="Set up for using AMC13 T3 trigger input", metavar="t3trig")
 parser.add_option("--throttle", type="int", default=0, dest="throttle",
                   help="factor by which to throttle the input L1A rate, e.g. new trig rate = L1A rate / throttle", metavar="throttle")
-parser.add_option("--vt1", type="int", dest="vt1",
-                  help="VThreshold1 DAC value for all VFATs", metavar="vt1", default=100)
 parser.add_option("--vt2", type="int", dest="vt2", default=0,
                   help="Specify VT2 to use", metavar="vt2")
 
 parser.set_defaults(scanmin=153,scanmax=172,nevts=500)
-
 (options, args) = parser.parse_args()
 
 if options.scanmin not in range(256) or options.scanmax not in range(256) or not (options.scanmax > options.scanmin):
@@ -52,6 +51,14 @@ if options.vt2 not in range(256):
 if options.MSPL not in range(1,9):
     print("Invalid MSPL specified: %d, must be in range [1,8]"%(options.MSPL))
     exit(1)
+
+if options.stepSize <= 0:
+    print("Invalid stepSize specified: %d, must be in range [1, %d]"%(options.stepSize, options.scanmax-options.scanmin))
+    exit(1)
+
+step = options.stepSize
+if (step + options.scanmin > options.scanmax):
+    step = options.scanmax - options.scanmin
 
 if options.debug:
     uhal.setLogLevelTo(uhal.LogLevel.INFO)
@@ -78,6 +85,8 @@ Nhits = array( 'i', [ 0 ] )
 myT.Branch( 'Nhits', Nhits, 'Nhits/I' )
 vfatN = array( 'i', [ 0 ] )
 myT.Branch( 'vfatN', vfatN, 'vfatN/I' )
+vfatID = array( 'i', [-1] )
+myT.Branch( 'vfatID', vfatID, 'vfatID/I' ) #Hex Chip ID of VFAT
 mspl = array( 'i', [ -1 ] )
 myT.Branch( 'mspl', mspl, 'mspl/I' )
 vfatCH = array( 'i', [ 0 ] )
@@ -100,6 +109,9 @@ amc13base  = "gem.shelf%02d.amc13"%(options.shelf)
 amc13board = amc13.AMC13(connection_file,"%s.T1"%(amc13base),"%s.T2"%(amc13base))
 
 amcboard = amc.getAMCObject(options.slot,options.shelf,options.debug)
+amc.printSystemSCAInfo(amcboard, options.debug)
+amc.printSystemTTCInfo(amcboard, options.debug)
+
 ohboard  = oh.getOHObject(options.slot,options.gtx,options.shelf,options.debug)
 
 LATENCY_MIN = options.scanmin
@@ -114,15 +126,15 @@ try:
     writeAllVFATs(ohboard, options.gtx, "ContReg2",    ((options.MSPL-1)<<4))
     writeAllVFATs(ohboard, options.gtx, "VThreshold2", options.vt2, mask)
 
-    vals  = readAllVFATs(ohboard, options.gtx, "VThreshold1", mask)
+    vals  = readAllVFATs(ohboard, options.gtx, "VThreshold1", 0x0)
     vt1vals =  dict(map(lambda slotID: (slotID, vals[slotID]&0xff),
                         range(0,24)))
-    vals  = readAllVFATs(ohboard, options.gtx, "VThreshold2", mask)
+    vals  = readAllVFATs(ohboard, options.gtx, "VThreshold2", 0x0)
     vt2vals =  dict(map(lambda slotID: (slotID, vals[slotID]&0xff),
                         range(0,24)))
     vthvals =  dict(map(lambda slotID: (slotID, vt2vals[slotID]-vt2vals[slotID]),
                         range(0,24)))
-    vals = readAllVFATs(ohboard, options.gtx, "ContReg2",    mask)
+    vals = readAllVFATs(ohboard, options.gtx, "ContReg2",    0x0)
     msplvals =  dict(map(lambda slotID: (slotID, (1+(vals[slotID]>>4)&0x7)),
                          range(0,24)))
 
@@ -148,12 +160,12 @@ try:
     print "OH%s: %s"%(options.gtx,ohnL1A)
     oh.configureScanModule(ohboard, options.gtx, mode, mask,
                         scanmin=LATENCY_MIN, scanmax=LATENCY_MAX,
+                        stepsize=step,
                         numtrigs=int(options.nevts),
                         useUltra=True, debug=True)
     oh.printScanConfiguration(ohboard, options.gtx, useUltra=True, debug=options.debug)
     sys.stdout.flush()
     amc13board.enableLocalL1A(True)
-
 
     if options.internal:
         amc.blockL1A(amcboard)
@@ -223,6 +235,7 @@ try:
     sys.stdout.flush()
     for i in range(0,24):
         vfatN[0] = i
+        vfatID[0] = getChipID(ohboard, options.gtx, i, options.debug)
         dataNow = scanData[i]
         mspl[0]  = msplvals[vfatN[0]]
         vth1[0]  = vt1vals[vfatN[0]]

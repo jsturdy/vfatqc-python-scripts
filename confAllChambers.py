@@ -3,17 +3,20 @@
 def launch(args):
   return launchArgs(*args)
 
-def launchArgs(shelf,link,slot,run,vt1,vt1bump,config,cName,ztrim):
+def launchArgs(shelf,link,slot,run,vt1,vt1bump,config,cName,ztrim,debug=False):
     import datetime,os,sys
-    import subprocess
     from subprocess import CalledProcessError
-    from chamberInfo import chamber_config
+    from mapping.chamberInfo import chamber_config
     from gempython.utils.wrappers import runCommand
 
     dataPath = os.getenv('DATA_PATH')
     filename="%s/%s/trim/z%f/config/SCurveData_Trimmed/SCurveFitData.root"%(dataPath,cName,options.ztrim)
 
     cmd = ["confChamber.py","-s%d"%(slot),"-g%d"%(link),"--shelf=%i"%(shelf)]
+
+    if debug:
+        cmd.append("--debug")
+        pass
 
     if run:
         cmd.append("--run")
@@ -23,6 +26,7 @@ def launchArgs(shelf,link,slot,run,vt1,vt1bump,config,cName,ztrim):
         cmd.append("--vt1bump=%d"%(vt1bump))
         cmd.append("--vfatConfig=%s/configs/z%.1f/vfatConfig_%s.txt"%(dataPath,ztrim,cName))
         cmd.append("--chConfig=%s/configs/z%.1f/chConfig_%s.txt"%(dataPath,ztrim,cName))
+        pass
     else:
         if not os.path.isfile(filename):
             print "No trim configuration exists for z = %f for %s"%(ztrim,cName)
@@ -45,7 +49,7 @@ if __name__ == '__main__':
     import subprocess
     import itertools
     from multiprocessing import Pool, freeze_support
-    from chamberInfo import chamber_config
+    from mapping.chamberInfo import chamber_config
     from gempython.utils.wrappers import envCheck
 
     from qcoptions import parser
@@ -76,6 +80,7 @@ if __name__ == '__main__':
                         [options.config    for x in range(len(chamber_config))],
                         [chamber_config[x] for x in chamber_config.keys()],
                         [options.ztrim     for x in range(len(chamber_config))],
+                        [options.debug     for x in range(len(chamber_config))]
                   )
             )
         pass
@@ -83,7 +88,7 @@ if __name__ == '__main__':
         print "Configuring chambers in serial mode"
         for link in chamber_config.keys():
             chamber = chamber_config[link]
-            launchArgs(options.shelf,link,options.slot,options.run,options.vt1,options.vt1bump,options.config,chamber,options.ztrim)
+            launchArgs(options.shelf,link,options.slot,options.run,options.vt1,options.vt1bump,options.config,chamber,options.ztrim,options.debug)
             pass
         pass
     else:
@@ -103,6 +108,7 @@ if __name__ == '__main__':
                                                 [options.config    for x in range(len(chamber_config))],
                                                 [chamber_config[x] for x in chamber_config.keys()],
                                                 [options.ztrim     for x in range(len(chamber_config))],
+                                                [options.debug     for x in range(len(chamber_config))]
                                                 )
                                  )
             # timeout must be properly set, otherwise tasks will crash
