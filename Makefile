@@ -4,16 +4,16 @@
 
 BUILD_HOME := $(shell dirname `pwd`)
 
-Project      := vfatqc-python-scripts
-ShortProject := vfatqc
-Namespace    := gempython
-Package      := vfatqc-python-scripts
-ShortPackage := vfatqc
-LongPackage  := vfatqc
-PackageName  := $(Namespace)_$(ShortPackage)
-PackageDir   := pkg/$(Namespace)/$(ShortPackage)
-ScriptDir    := pkg/$(Namespace)/scripts
-
+Project     := vfatqc-python-scripts
+ShortProject:= vfatqc
+Namespace   := gempython
+Package     := vfatqc-python-scripts
+ShortPackage:= vfatqc
+LongPackage := vfatqc
+PackageName := $(Namespace)_$(ShortPackage)
+PackageDir  := pkg/$(Namespace)/$(ShortPackage)
+ScriptDir   := pkg/$(Namespace)/scripts
+INSTALL_PATH=/opt/$(Namespace)
 
 ProjectPath:=$(BUILD_HOME)/$(Project)
 ConfigDir:=$(ProjectPath)/config
@@ -33,9 +33,6 @@ VFATQC_VER_PATCH:=$(shell $(ConfigDir)/tag2rel.sh | awk '{split($$0,a," "); prin
 
 include $(ConfigDir)/mfSphinx.mk
 include $(ConfigDir)/mfPythonRPM.mk
-# VFATQC_VER_MAJOR=2
-# VFATQC_VER_MINOR=4
-# VFATQC_VER_PATCH=3
 
 PythonSources=$(wildcard *.py)
 PythonSources+=$(wildcard utils/*.py)
@@ -52,6 +49,7 @@ default:
 $(PackageSetupFile): pkg/setup.py
 $(PackagePrepFile): $(PythonSources) Makefile | default
 	@cp -rf config/scriptlets/installrpm.sh pkg/
+	@perl -pi -e "s|__PYTHON_SCRIPT_PATH__|$(INSTALL_PATH)/bin/$(ShortPackage)|g" pkg/installrpm.sh
 	$(MakeDir) $(ScriptDir)
 	@cp -rf checkSbitMappingAndRate.py $(ScriptDir)
 	@cp -rf conf*.py $(ScriptDir)
