@@ -15,22 +15,31 @@ PackageDir   := pkg/$(Namespace)/$(ShortPackage)
 ScriptDir    := pkg/$(Namespace)/scripts
 
 
+ProjectPath:=$(BUILD_HOME)/$(Project)
+ConfigDir:=$(ProjectPath)/config
+
+include $(ConfigDir)/mfCommonDefs.mk
+include $(ConfigDir)/mfPythonDefs.mk
+
 # Explicitly define the modules that are being exported (for PEP420 compliance)
 PythonModules = ["$(Namespace).$(ShortPackage)", \
                  "$(Namespace).$(ShortPackage).utils", \
 ]
 $(info PythonModules=${PythonModules})
 
-VFATQC_VER_MAJOR=2
-VFATQC_VER_MINOR=4
-VFATQC_VER_PATCH=3
+VFATQC_VER_MAJOR:=$(shell $(ConfigDir)/tag2rel.sh | awk '{split($$0,a," "); print a[1];}' | awk '{split($$0,b,":"); print b[2];}')
+VFATQC_VER_MINOR:=$(shell $(ConfigDir)/tag2rel.sh | awk '{split($$0,a," "); print a[2];}' | awk '{split($$0,b,":"); print b[2];}')
+VFATQC_VER_PATCH:=$(shell $(ConfigDir)/tag2rel.sh | awk '{split($$0,a," "); print a[3];}' | awk '{split($$0,b,":"); print b[2];}')
 
-include $(BUILD_HOME)/$(Project)/config/mfCommonDefs.mk
-include $(BUILD_HOME)/$(Project)/config/mfPythonDefs.mk
+include $(ConfigDir)/mfSphinx.mk
+include $(ConfigDir)/mfPythonRPM.mk
+# VFATQC_VER_MAJOR=2
+# VFATQC_VER_MINOR=4
+# VFATQC_VER_PATCH=3
 
-# include $(BUILD_HOME)/$(Project)/config/mfDefs.mk
-
-include $(BUILD_HOME)/$(Project)/config/mfPythonRPM.mk
+PythonSources=$(wildcard *.py)
+PythonSources+=$(wildcard utils/*.py)
+PythonSources+=$(wildcard macros/*.py)
 
 default:
 	@echo "Running default target"
@@ -39,12 +48,9 @@ default:
 	@echo "__path__ = __import__('pkgutil').extend_path(__path__, __name__)" > pkg/$(Namespace)/__init__.py
 	@cp -rf __init__.py $(PackageDir)
 
-# need to ensure that the python only stuff is packaged into RPMs
-.PHONY: clean preprpm
-_rpmprep: preprpm
-	@echo "Running _rpmprep target"
-preprpm: default
-	@echo "Running preprpm target"
+# Override, as this package uses pkg/setup.py as the template file
+$(PackageSetupFile): pkg/setup.py
+$(PackagePrepFile): $(PythonSources) Makefile | default
 	@cp -rf config/scriptlets/installrpm.sh pkg/
 	$(MakeDir) $(ScriptDir)
 	@cp -rf checkSbitMappingAndRate.py $(ScriptDir)
